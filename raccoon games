@@ -1,0 +1,1200 @@
+import pygame
+import sys
+import random
+import time
+import os
+
+pygame.init()
+
+IMAGE_FOLDER = "jpeg scrapyard"
+
+def countdown():
+    screen.fill(WHITE)
+    for i in range(3, 0, -1):
+        screen.fill(WHITE)
+        txt = font.render(f"Game starts in: {i}", True, BLACK)
+        screen.blit(txt, (250, 250))
+        pygame.display.flip()
+        pygame.time.delay(1000)
+
+pixel_font = pygame.font.SysFont("Courier", 20, bold=True)
+ 
+# Screen dimensions
+WIDTH, HEIGHT = 800, 600
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Racoon Games")
+
+# Colors
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+RED   = (255, 0, 0)
+GREEN = (0, 255, 0)
+BLUE  = (0, 0, 255)
+ORANGE = (255, 165, 0)
+
+
+
+# Fonts
+font = pygame.font.SysFont(None, 48)
+font_big = pygame.font.SysFont("Courier", 60, bold=True)
+font_small = pygame.font.SysFont("Courier", 20, bold=True)
+pixel_font = pygame.font.SysFont("Courier", 24)
+
+# Images and Paths
+pygame.mixer.init()
+
+logo = pygame.image.load(os.path.join(IMAGE_FOLDER, "logo.jpg"))
+
+# Load logo
+logo = pygame.transform.scale(logo, (600, 400))
+logo_rect = logo.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+
+clock = pygame.time.Clock()
+
+# Glitch effect
+def glitch_effect(surface, image, rect, intensity=2):  
+    surface.fill((255, 255, 255))
+    for i in range(intensity):
+        slice_height = random.randint(10, 20)           
+        y = random.randint(0, image.get_height() - slice_height)
+        slice_area = pygame.Rect(0, y, image.get_width(), slice_height)
+        slice_img = image.subsurface(slice_area)
+        offset = random.randint(-5, 5)                 
+        surface.blit(slice_img, (rect.left + offset, rect.top + y))
+
+    # 🔽 Lower chance of color flash
+    if random.random() < 0.05:  # 5% chance (was 20%)
+        flash = pygame.Surface(image.get_size())
+        flash.fill(random.choice([(0, 255, 255), (255, 0, 255), (255, 255, 0)]))
+        flash.set_alpha(40)
+        surface.blit(flash, rect)
+
+def run_glitch_intro():
+    glitch_duration = 2  # seconds of glitching
+    pause_duration = 2   # seconds to pause on clean logo
+    start_time = time.time()
+
+    # 1. Glitching phase
+    while time.time() - start_time < glitch_duration:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+        glitch_effect(screen, logo, logo_rect)
+        pygame.display.flip()
+        clock.tick(30)
+
+    # 2. Pause on clean logo
+    pause_start = time.time()
+    while time.time() - pause_start < pause_duration:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+        screen.fill((255, 255, 255))  # black background
+        screen.blit(logo, logo_rect)  # show clean logo
+        pygame.display.flip()
+        clock.tick(30)
+
+def quit_button():
+    pygame.draw.rect(screen, RED, (10, 10, 100, 40))
+    text = font_small.render("Quit", True, WHITE)
+    screen.blit(text, (30, 20))
+
+# Fonts and Clock
+font = pygame.font.SysFont(None, 48)
+font_big = pygame.font.SysFont(None, 64)
+clock = pygame.time.Clock()
+
+# Game State
+state = "home"
+selected_character = None
+
+# ------------------ HOME SCREEN + BUTTON DRAWER ------------------
+# Load all images
+menu= pygame.image.load(os.path.join(IMAGE_FOLDER, "menubg.jpg")).convert()
+menu= pygame.transform.scale(menu, (WIDTH, HEIGHT))
+rules_button_img = pygame.image.load(os.path.join(IMAGE_FOLDER, "rules.png")).convert_alpha()
+play_button_img = pygame.image.load(os.path.join(IMAGE_FOLDER, "start.png")).convert_alpha()
+rules_bg = pygame.image.load(os.path.join(IMAGE_FOLDER, "rulesbg.jpg")).convert()
+rules_bg= pygame.transform.scale(rules_bg, (WIDTH, HEIGHT))
+zero= pygame.image.load(os.path.join(IMAGE_FOLDER, "000.png")).convert()
+bows= pygame.image.load(os.path.join(IMAGE_FOLDER, "000bows.png")).convert()
+tie= pygame.image.load(os.path.join(IMAGE_FOLDER, "000tie.png")).convert()
+
+# Resize buttons
+rules_button_img = pygame.transform.scale(rules_button_img, (200, 100))
+play_button_img = pygame.transform.scale(play_button_img, (200,80))
+
+# Button rects
+rules_button_rect = rules_button_img.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 100))
+play_button_rect = play_button_img.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+
+# Show rules screen
+def rules_screen():
+    viewing = True
+    while viewing:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
+                viewing = False  # any key or click exits rules screen
+
+        screen.blit(rules_bg, (0, 0))
+        pygame.display.flip()
+        clock.tick(30)
+
+# Menu screen with buttons
+def menu_screen():
+    while True:
+        screen.blit(menu, (0, 0))
+        screen.blit(play_button_img, play_button_rect)
+        screen.blit(rules_button_img, rules_button_rect)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if play_button_rect.collidepoint(event.pos):
+                    character_screen()
+                    return
+                elif rules_button_rect.collidepoint(event.pos):
+                    rules_screen()
+
+        pygame.display.flip()
+        clock.tick(60)
+    
+def character_screen():
+    char_files = ["000.png", "000bows.png", "000tie.png"]
+    char_imgs = []
+    char_rects = []
+
+    x_positions = [145, 320, 495]
+    for i, filename in enumerate(char_files):
+        path = os.path.join(IMAGE_FOLDER, filename)  # ✅ filename must be a string
+        img = pygame.image.load(path).convert_alpha()
+        img = pygame.transform.scale(img, (150, 200))
+        rect = img.get_rect(topleft=(x_positions[i], 300))
+        char_imgs.append(img)
+        char_rects.append(rect)
+
+    selected_index = None
+    start_button_rect = pygame.Rect(0, 0, 180, 60)
+    running = True
+
+    while running:
+        screen.blit(menu, (0, 0))  # use menu background
+
+        # Draw all characters
+        for i, img in enumerate(char_imgs):
+            screen.blit(img, char_rects[i])
+            if selected_index == i:
+                pygame.draw.rect(screen, GREEN, char_rects[i], 4)  # highlight
+
+        # Draw Quit button
+        draw_button("Quit", (10, 10, 100, 40), RED)
+
+        # Draw Start button under selected character
+        if selected_index is not None:
+            start_button_rect.center = (char_rects[selected_index].centerx, char_rects[selected_index].bottom + 40)
+            draw_button("Start", start_button_rect, GREEN)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                pos = event.pos
+
+                # Quit
+                if pygame.Rect(10, 10, 100, 40).collidepoint(pos):
+                    running = False
+
+                # Select character
+                for i, rect in enumerate(char_rects):
+                    if rect.collidepoint(pos):
+                        selected_index = i
+
+                # Start game
+                if selected_index is not None and start_button_rect.collidepoint(pos):
+                    timsoutside()
+                    return
+
+        pygame.display.flip()
+        clock.tick(60)
+
+def draw_button(text, rect, color, text_color=BLACK):
+    pygame.draw.rect(screen, color, rect)
+    font = pygame.font.SysFont(None, 36)
+    label = font.render(text, True, text_color)
+    label_rect = label.get_rect(center=(rect[0] + rect[2] // 2, rect[1] + rect[3] // 2))
+    screen.blit(label, label_rect)
+
+def timsoutside():
+    # Load images
+    bg_outside = pygame.image.load(os.path.join(IMAGE_FOLDER, "timoutside.jpg")).convert()
+    bg_outside = pygame.transform.scale(bg_outside, (WIDTH, HEIGHT))
+    bg_inside = pygame.image.load(os.path.join(IMAGE_FOLDER, "insidetims.jpg")).convert()
+    bg_inside = pygame.transform.scale(bg_inside, (WIDTH, HEIGHT))
+
+    raccoon = pygame.image.load(os.path.join(IMAGE_FOLDER, "nakedraccoon.png")).convert_alpha()
+    raccoon = pygame.transform.scale(raccoon, (150, 150))
+    raccoon_with_coffee = pygame.image.load(os.path.join(IMAGE_FOLDER, "nakedraccoonwithdrink.png")).convert_alpha()
+    raccoon_with_coffee = pygame.transform.scale(raccoon_with_coffee, (150, 150))
+
+    van_closed = pygame.image.load(os.path.join(IMAGE_FOLDER, "vanclosed.png")).convert_alpha()
+    van_closed = pygame.transform.scale(van_closed, (300, 150))
+    van_open = pygame.image.load(os.path.join(IMAGE_FOLDER, "vanopen.png")).convert_alpha()
+    van_open = pygame.transform.scale(van_open, (300, 150))
+
+    raccoon_x = -150
+    raccoon_y = HEIGHT - 200
+    raccoon_img = raccoon
+    current_bg = bg_outside
+    clock = pygame.time.Clock()
+    running = True
+    stage = 1
+
+    inside_start_time = None
+    inside_pause_duration = 3000
+    fade_start_time = None
+    intro_start_time = None
+    intro_duration = 6000  # how long to show intro text (ms)
+
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+        screen.blit(current_bg, (0, 0))
+
+        if stage == 1:
+            raccoon_x += 5
+            screen.blit(raccoon_img, (raccoon_x, raccoon_y))
+            if raccoon_x >= WIDTH // 2 - 75:
+                stage = 2
+                current_bg = bg_inside
+                raccoon_x = WIDTH // 2 - 75
+                raccoon_y = HEIGHT - 250
+                raccoon_img = raccoon_with_coffee
+                inside_start_time = pygame.time.get_ticks()
+
+        elif stage == 2:
+            screen.blit(raccoon_img, (raccoon_x, raccoon_y))
+            now = pygame.time.get_ticks()
+            if now - inside_start_time >= inside_pause_duration:
+                stage = 4  # skip stage 3
+                current_bg = bg_outside
+                raccoon_x = 500
+                raccoon_y = HEIGHT - 200
+
+        elif stage == 4:
+            screen.blit(van_closed, (300, HEIGHT - 180))
+            screen.blit(raccoon_img, (raccoon_x, raccoon_y))
+            pygame.display.flip()
+            pygame.time.delay(1000)
+            stage = 5
+
+        elif stage == 5:
+            screen.blit(van_open, (300, HEIGHT - 180))
+            pygame.display.flip()
+            pygame.time.delay(1200)
+            fade_start_time = pygame.time.get_ticks()
+            stage = 6
+
+        elif stage == 6:
+            elapsed = pygame.time.get_ticks() - fade_start_time
+            if elapsed <= 1000:
+                cover_height = int((elapsed / 1000) * (HEIGHT // 2))
+                top_rect = pygame.Rect(0, 0, WIDTH, cover_height)
+                bottom_rect = pygame.Rect(0, HEIGHT - cover_height, WIDTH, cover_height)
+                pygame.draw.rect(screen, BLACK, top_rect)
+                pygame.draw.rect(screen, BLACK, bottom_rect)
+            else:
+                stage = 7
+                intro_start_time = pygame.time.get_ticks()
+
+        elif stage == 7:
+            screen.fill(BLACK)
+
+            lines = [
+                "You have been kidnapped",
+                "to take part in the Raccoon Games!",
+                "",
+                "The Raccoon Games are a series",
+                "of games played by participants,",
+                "in order to win Tim Hortons!",
+                "",
+                "However, if you fail one of the games,",
+                "you will be... eliminated."
+            ]
+
+            for i, line in enumerate(lines):
+                text_surface = pixel_font.render(line, True, WHITE)
+                text_rect = text_surface.get_rect(center=(WIDTH // 2, 80 + i * 40))
+                screen.blit(text_surface, text_rect)
+
+            if pygame.time.get_ticks() - intro_start_time >= intro_duration:
+                running = False
+                tictactoe_intro(selected_character)  # ✅ go to first game scene
+
+        pygame.display.flip()
+        clock.tick(60)
+
+        
+# ------------------ first game bit-----------------
+def tictactoe_intro(selected_character):
+    # Placeholder background (replace later with actual image)
+    placeholder_bg = pygame.image.load(os.path.join(IMAGE_FOLDER, "squidgames.jpg")).convert()
+    placeholder_bg = pygame.transform.scale(placeholder_bg, (WIDTH, HEIGHT))
+
+    # Characters to display
+    characters = [
+        selected_character,  # Player's chosen character
+        "222.png",
+        "333.png",
+        "100.png",
+        "456.jpg"
+    ]
+
+    character_surfaces = []
+    x_positions = [100, 200, 300, 400, 500]  # horizontal spacing
+
+    for i, filename in enumerate(characters):
+        try:
+            path = os.path.join(IMAGE_FOLDER, filename)
+            char_img = pygame.image.load(path).convert_alpha()
+            char_img = pygame.transform.scale(char_img, (100, 150))
+            character_surfaces.append((char_img, x_positions[i]))
+        except:
+            print(f"⚠️ Error loading character image: {filename}")
+
+    # Show character lineup for 5 seconds
+    start_time = pygame.time.get_ticks()
+    showing = True
+    while showing:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+        screen.blit(placeholder_bg, (0, 0))
+        for img, x in character_surfaces:
+            screen.blit(img, (x, HEIGHT // 2 - 75))
+
+        if pygame.time.get_ticks() - start_time >= 5000:
+            showing = False
+
+        pygame.display.flip()
+        clock.tick(60)
+
+    # Switch to black screen with game instructions
+    show_tictactoe_text()
+
+def show_tictactoe_text():
+    lines = [
+        "Tic-Tac-Toe",
+        "The first game of Raccoon Games is... Tic Tac Toe!",
+        "",
+        "You will play against the computer,",
+        "and if you win you will advance to the next game,",
+        "if not... you will be eliminated."
+    ]
+
+    start_time = pygame.time.get_ticks()
+    running = True
+
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+        screen.fill(BLACK)
+
+        for i, line in enumerate(lines):
+            text_surface = pixel_font.render(line, True, WHITE)
+            text_rect = text_surface.get_rect(center=(WIDTH // 2, 80 + i * 40))
+            screen.blit(text_surface, text_rect)
+
+        if pygame.time.get_ticks() - start_time >= 6000:
+            running = False 
+            tic_tac_toe()  # Start the Tic Tac Toe game
+
+        pygame.display.flip()
+        clock.tick(60)
+def tic_tac_toe():
+    board = [""] * 9
+    player = "X"
+    running = True
+
+    def draw_board():
+        screen.fill(WHITE)
+        quit_button()
+        # Draw grid
+        pygame.draw.line(screen, BLACK, (267, 50), (267, 350), 5)
+        pygame.draw.line(screen, BLACK, (533, 50), (533, 350), 5)
+        pygame.draw.line(screen, BLACK, (50, 150), (750, 150), 5)
+        pygame.draw.line(screen, BLACK, (50, 250), (750, 250), 5)
+
+        # Draw X and O
+        for i in range(9):
+            x = 50 + (i % 3) * 240 + 80
+            y = 50 + (i // 3) * 100 + 40
+            if board[i] != "":
+                txt = font_big.render(board[i], True, BLUE if board[i] == "X" else RED)
+                screen.blit(txt, (x, y))
+
+    def check_winner(brd, pl):
+        wins = [
+            (0,1,2), (3,4,5), (6,7,8),
+            (0,3,6), (1,4,7), (2,5,8),
+            (0,4,8), (2,4,6)
+        ]
+        for a,b,c in wins:
+            if brd[a] == brd[b] == brd[c] == pl:
+                return True
+        return False
+
+    def computer_move():
+        empty = [i for i, v in enumerate(board) if v == ""]
+        if empty:
+            board[random.choice(empty)] = "O"
+
+    while running:
+        draw_board()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit(); sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                mx, my = event.pos
+                if 10 <= mx <= 110 and 10 <= my <= 50:
+                    pygame.quit(); sys.exit()  # Disable going back to home
+
+                col = (mx - 50) // 240
+                row = (my - 50) // 100
+                idx = row * 3 + col
+                if 0 <= col < 3 and 0 <= row < 3 and board[idx] == "":
+                    board[idx] = player
+                    if check_winner(board, player):
+                        show_result_screen("You won Tic Tac Toe! 🎉", GREEN)
+                        show_red_light_intro()
+                        red_light()
+                        return
+
+                    computer_move()
+                    if check_winner(board, "O"):
+                        show_result_screen("You lost Tic Tac Toe... 😢", RED)
+                        show_red_light_intro()
+                        red_light()
+                        return
+
+                    if "" not in board:
+                        show_result_screen("It's a draw! 🤷‍♂️", ORANGE)
+                        show_red_light_intro()
+                        red_light()
+                        return
+
+        pygame.display.flip()
+        clock.tick(60)
+
+
+def show_result_screen(message, color):
+    screen.fill(BLACK)
+    text = font_big.render(message, True, color)
+    rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+    screen.blit(text, rect)
+    pygame.display.flip()
+    pygame.time.delay(3000)
+
+
+
+
+def show_red_light_intro():
+    lines = [
+        "Next Game: Red Light Green Light",
+        "",
+        "Press SPACE to move forward when the light is green.",
+        "If you move while the light is red, you lose.",
+        "Reach the finish line to win!",
+    ]
+
+    start_time = pygame.time.get_ticks()
+    running = True
+
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+        screen.fill(WHITE)
+
+        for i, line in enumerate(lines):
+            text_surface = font.render(line, True, BLACK)
+            text_rect = text_surface.get_rect(center=(WIDTH // 2, 150 + i * 40))
+            screen.blit(text_surface, text_rect)
+
+        if pygame.time.get_ticks() - start_time >= 6000:
+            running = False
+
+        pygame.display.flip()
+        clock.tick(60)
+
+def victory_screen():
+    global state
+    running = True
+    while running:
+        screen.fill(WHITE)
+        title = font_big.render("\U0001F3C6 You Won the Racoon Games! \U0001F3C6", True, GREEN)
+        screen.blit(title, (50, 200))
+        title = font_big.render("You won! You get infinite Tim Hortons! \U0001F3C6", True, GREEN)
+        screen.blit(title, (50, 00))
+
+        btn_rect = pygame.Rect(325, 350, 150, 60)
+        pygame.draw.rect(screen, BLUE, btn_rect)
+        btn_text = font.render("Home", True, WHITE)
+        screen.blit(btn_text, (btn_rect.x + 45, btn_rect.y + 15))
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit(); sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                mx, my = event.pos
+                if btn_rect.collidepoint(mx, my):
+                    state = 'home'
+                    return
+        pygame.display.flip()
+        clock.tick(60)
+
+def game_over_screen():
+    screen.fill(BLACK)
+    msg = "GAME OVER"
+    text = font_big.render(msg, True, RED)
+    rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+    screen.blit(text, rect)
+    pygame.display.flip()
+    pygame.time.delay(3000)
+    pygame.quit()
+    sys.exit()
+
+
+        
+
+
+
+# -------------- REST OF THE GAME SCREENS -----------------
+
+
+
+def transition_screen(next_state):
+    global state
+    screen.fill(WHITE)
+    transition_text = font.render("Get ready for the next game!", True, BLACK)
+    screen.blit(transition_text, (WIDTH // 2 - transition_text.get_width() // 2, HEIGHT // 2 - 50))
+    pygame.display.flip()
+    for i in range(3, 0, -1):
+        screen.fill(WHITE)
+        txt = font.render(f"Next game in: {i}", True, BLACK)
+        screen.blit(txt, (WIDTH // 2 - txt.get_width() // 2, HEIGHT // 2))
+        pygame.display.flip()
+        pygame.time.delay(1000)
+    state = next_state
+
+
+def victory_screen():
+    global state
+    running = True
+    while running:
+        screen.fill(WHITE)
+        title = font_big.render("\U0001F3C6 You Won the Racoon Games! \U0001F3C6", True, GREEN)
+        screen.blit(title, (50, 200))
+        draw_button("Home", (325, 350, 150, 60), BLUE)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit(); sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                mx, my = event.pos
+                if 325 <= mx <= 475 and 350 <= my <= 410:
+                    state = 'home'
+                    return
+        pygame.display.flip()
+        clock.tick(60)
+# -------------------- GAME 1: TIC TAC TOE --------------------
+
+
+# -------------------- GAME 2: ROCK PAPER SCISSORS --------------------
+
+def rock_paper():
+    global state
+    options = ["Rock", "Paper", "Scissors"]
+    player_choice = None
+    computer_choice = None
+    result = ""
+    running = True
+
+    while running:
+        screen.fill(WHITE)
+        quit_button()
+
+        # Draw buttons for Rock, Paper, Scissors
+        for i, opt in enumerate(options):
+            rect = (150 + i*170, 300, 150, 60)
+            pygame.draw.rect(screen, BLUE, rect)
+            txt = font.render(opt, True, WHITE)
+            screen.blit(txt, (rect[0]+30, rect[1]+15))
+            # Detect click
+            mx, my = pygame.mouse.get_pos()
+            click = pygame.mouse.get_pressed()[0]
+            if click and rect[0] <= mx <= rect[0] + rect[2] and rect[1] <= my <= rect[1] + rect[3]:
+                player_choice = opt
+                computer_choice = random.choice(options)
+                # Decide winner
+                if player_choice == computer_choice:
+                    result = "Draw! Play again."
+                elif (player_choice == "Rock" and computer_choice == "Scissors") or \
+                     (player_choice == "Paper" and computer_choice == "Rock") or \
+                     (player_choice == "Scissors" and computer_choice == "Paper"):
+                    result = "You Win!"
+                    transition_screen("rps")
+                    return
+                else:
+                    result = "You Lose!"
+                    state = "home"
+                    return
+
+        # Show choices and result
+        if player_choice:
+            pc_txt = font.render(f"You chose: {player_choice}", True, BLACK)
+            cc_txt = font.render(f"Computer chose: {computer_choice}", True, BLACK)
+            res_txt = font.render(result, True, RED if "Lose" in result else GREEN)
+            screen.blit(pc_txt, (250, 200))
+            screen.blit(cc_txt, (250, 240))
+            screen.blit(res_txt, (250, 280))
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit(); sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                mx, my = event.pos
+                if 10 <= mx <= 110 and 10 <= my <= 50:
+                    state = "home"
+                    return
+
+        pygame.display.flip()
+        clock.tick(60)
+
+# -------------------- GAME 3: TUG OF WAR --------------------
+
+def tug_of_war():
+    global state
+    player_pos = 400
+    computer_pos = 400
+    goal = 200
+    speed = 10
+    running = True
+
+    while running:
+        screen.fill(WHITE)
+        quit_button()
+
+        # Draw the rope (line)
+        pygame.draw.line(screen, BLACK, (goal, 300), (800 - goal, 300), 8)
+        # Draw center line
+        pygame.draw.line(screen, RED, (400, 270), (400, 330), 5)
+
+        # Draw player and computer markers
+        pygame.draw.circle(screen, BLUE, (player_pos, 300), 20)
+        pygame.draw.circle(screen, RED, (computer_pos, 300), 20)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit(); sys.exit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    player_pos -= speed
+                    computer_pos += speed // 2  # Computer pulls less strongly
+                    if player_pos <= goal:
+                        # Player wins, go to next game
+                        transition_screen("tug")
+                        return
+                    elif computer_pos >= 800 - goal:
+                        # Player loses
+                        state = "home"
+                        return
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                mx, my = event.pos
+                if 10 <= mx <= 110 and 10 <= my <= 50:
+                    state = "home"
+                    return
+
+        pygame.display.flip()
+        clock.tick(60)
+
+# -------------------- GAME 4: RED LIGHT GREEN LIGHT --------------------
+
+def red_light():
+    global state
+    player_x = 50
+    finish_line = 700
+    red_light_on = False
+    clock_count = 0
+    timer_start = pygame.time.get_ticks()
+    time_limit = 20000  # 20 seconds
+
+    while True:
+        screen.fill(WHITE)
+        elapsed = pygame.time.get_ticks() - timer_start
+        if elapsed > time_limit:
+            show_result_screen("Time's up! You lost.", RED)
+            game_over_screen()
+
+        if clock_count % 90 == 0:
+            red_light_on = not red_light_on
+
+        color = RED if red_light_on else GREEN
+        pygame.draw.circle(screen, color, (750, 100), 40)
+
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_SPACE]:
+            if red_light_on:
+                show_result_screen("You moved on red! ❌", RED)
+                game_over_screen()
+            else:
+                player_x += 5
+
+        pygame.draw.rect(screen, BLUE, (player_x, 300, 40, 40))
+        pygame.draw.line(screen, BLACK, (finish_line, 250), (finish_line, 350), 5)
+
+        if player_x >= finish_line:
+            show_result_screen("You won Red Light Green Light! 🚦", GREEN)
+            show_tug_intro()
+            return
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit(); sys.exit()
+
+        pygame.display.flip()
+        clock_count += 1
+        clock.tick(60)
+
+
+def show_tug_intro():
+    lines = [
+        "Next Game: Tug of War 💪",
+        "",
+        "Press SPACE repeatedly to pull the rope.",
+        "Beat the computer to win.",
+        "First to reach the edge wins!"
+    ]
+
+    start_time = pygame.time.get_ticks()
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit(); sys.exit()
+
+        screen.fill(WHITE)
+        for i, line in enumerate(lines):
+            text_surface = font.render(line, True, BLACK)
+            text_rect = text_surface.get_rect(center=(WIDTH // 2, 150 + i * 40))
+            screen.blit(text_surface, text_rect)
+
+        if pygame.time.get_ticks() - start_time >= 6000:
+            tug_of_war()
+            return
+
+        pygame.display.flip()
+        clock.tick(60)
+
+def tug_of_war():
+    global state
+    player_pos = 400
+    computer_pos = 400
+    goal = 200
+    speed = 10
+
+    while True:
+        screen.fill(WHITE)
+
+        pygame.draw.line(screen, BLACK, (goal, 300), (800 - goal, 300), 8)
+        pygame.draw.line(screen, RED, (400, 270), (400, 330), 5)
+        pygame.draw.circle(screen, BLUE, (player_pos, 300), 20)
+        pygame.draw.circle(screen, RED, (computer_pos, 300), 20)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit(); sys.exit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    player_pos -= speed
+                    computer_pos += speed // 2
+                    if player_pos <= goal:
+                        show_result_screen("You won Tug of War! 💪", GREEN)
+                        show_rps_intro()
+                        return
+                    elif computer_pos >= 800 - goal:
+                        show_result_screen("You lost Tug of War... 💀", RED)
+                        game_over_screen()
+                        return
+
+        pygame.display.flip()
+        clock.tick(60)
+
+# -------------------- RPS INTRO SCREEN --------------------
+def show_rps_intro():
+    global state
+    lines = [
+        "Final Game: Rock Paper Scissors \U0001F91C",
+        "",
+        "Click one of the options to play.",
+        "Win to survive. Lose and you're eliminated.",
+        "Only one chance! Choose wisely."
+    ]
+
+    start_time = pygame.time.get_ticks()
+    running = True
+
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+        screen.fill(WHITE)
+
+        for i, line in enumerate(lines):
+            text_surface = font.render(line, True, BLACK)
+            text_rect = text_surface.get_rect(center=(WIDTH // 2, 150 + i * 40))
+            screen.blit(text_surface, text_rect)
+
+        if pygame.time.get_ticks() - start_time >= 6000:
+            rock_paper()
+            return
+
+        pygame.display.flip()
+        clock.tick(60)
+
+# -------------------- RPS GAME --------------------
+def rock_paper():
+    global state
+    options = ["Rock", "Paper", "Scissors"]
+    player_choice = None
+    computer_choice = None
+    result = ""
+    clicked = False
+
+    while True:
+        screen.fill(WHITE)
+
+        # Draw buttons
+        for i, opt in enumerate(options):
+            rect = pygame.Rect(150 + i * 170, 300, 150, 60)
+            pygame.draw.rect(screen, BLUE, rect)
+            txt = font.render(opt, True, WHITE)
+            screen.blit(txt, (rect.x + 30, rect.y + 15))
+
+            mx, my = pygame.mouse.get_pos()
+            if not clicked and pygame.mouse.get_pressed()[0] and rect.collidepoint(mx, my):
+                player_choice = opt
+                computer_choice = random.choice(options)
+                clicked = True
+
+                if player_choice == computer_choice:
+                    result = "Draw!"
+                elif (player_choice == "Rock" and computer_choice == "Scissors") or \
+                     (player_choice == "Paper" and computer_choice == "Rock") or \
+                     (player_choice == "Scissors" and computer_choice == "Paper"):
+                    result = "You Win!"
+                else:
+                    result = "You Lose!"
+
+        if clicked:
+            pc_txt = font.render(f"You chose: {player_choice}", True, BLACK)
+            cc_txt = font.render(f"Computer chose: {computer_choice}", True, BLACK)
+            res_txt = font.render(result, True, GREEN if "Win" in result else RED if "Lose" in result else ORANGE)
+            screen.blit(pc_txt, (250, 200))
+            screen.blit(cc_txt, (250, 240))
+            screen.blit(res_txt, (250, 280))
+
+            pygame.display.flip()
+            pygame.time.delay(3000)
+
+            if result == "You Win!":
+                victory_screen()
+            else:
+                game_over_screen()
+            return
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit(); sys.exit()
+
+        pygame.display.flip()
+        clock.tick(60)
+
+
+
+
+
+# -------------------- GAME 5: HONEYCOMBS (Shape Tracing) --------------------
+
+def honeycomb():
+    global state
+    screen.fill(WHITE)
+    quit_button()
+
+    center = (400, 300)
+    radius = 100
+    tracing = False
+    progress = 0
+    total_required = 300
+    start_time = pygame.time.get_ticks()
+    max_time = 15000  # 15 seconds
+
+    while True:
+        screen.fill(WHITE)
+        quit_button()
+
+        current_time = pygame.time.get_ticks()
+        if current_time - start_time > max_time:
+            state = 'home'
+            return
+
+        mouse = pygame.mouse.get_pos()
+        dist = ((mouse[0] - center[0]) ** 2 + (mouse[1] - center[1]) ** 2) ** 0.5
+
+        if pygame.mouse.get_pressed()[0]:
+            if abs(dist - radius) < 10:
+                tracing = True
+                progress += 1
+                pygame.draw.circle(screen, GREEN, mouse, 5)
+            else:
+                tracing = False
+                progress -= 5
+                if progress < 0:
+                    progress = 0
+        else:
+            tracing = False
+
+        if progress >= total_required:
+            transition_screen("honey")
+            return
+
+        progress_text = font.render(f"Progress: {progress}/{total_required}", True, BLACK)
+        screen.blit(progress_text, (250, 100))
+        pygame.draw.circle(screen, BLACK, center, radius, 2)
+
+        pygame.display.flip()
+        clock.tick(60)
+
+# -------------------- GAME 6: JUMP ROPE --------------------
+
+def jump_rope():
+    global state
+    player = pygame.Rect(375, 450, 50, 50)
+    rope_y = 0
+    jump = False
+    jumped_successfully = 0
+    attempts = 0
+    max_attempts = 5
+
+    while True:
+        screen.fill(WHITE)
+        quit_button()
+
+        # Rope falls down
+        rope_y += 10
+        if rope_y > 600:
+            rope_y = 0
+            attempts += 1
+            if not jump:
+                # Missed jump
+                transition_screen("home")
+                return
+            else:
+                jumped_successfully += 1
+                jump = False
+
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_SPACE]:
+            jump = True
+            pygame.draw.rect(screen, GREEN, player.move(0, -100))
+        else:
+
+            pygame.draw.rect(screen, BLUE, player)
+
+        # Draw rope
+        pygame.draw.line(screen, RED, (0, rope_y), (800, rope_y), 5)
+
+        score_txt = font.render(f"Jumps: {jumped_successfully}/{max_attempts}", True, BLACK)
+        screen.blit(score_txt, (250, 50))
+
+        if jumped_successfully >= max_attempts:
+            transition_screen("hide")
+            return
+        elif attempts >= max_attempts and jumped_successfully < max_attempts:
+            transition_screen("home")
+            return
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit(); sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                mx, my = event.pos
+                if 10 <= mx <= 110 and 10 <= my <= 50:
+                    transition_screen("hided")
+                    return
+
+        pygame.display.flip()
+        clock.tick(60)
+
+# -------------------- GAME 7: HIDE AND SEEK --------------------
+
+def hide_seek():
+    global state
+    player = pygame.Rect(50, 50, 40, 40)
+    chaser = pygame.Rect(700, 500, 40, 40)
+    keys_collected = 0
+    total_keys = 3
+    keys = [pygame.Rect(random.randint(50, 700), random.randint(50, 500), 20, 20) for _ in range(total_keys)]
+    speed = 4
+    chaser_speed = 2
+    start_ticks = pygame.time.get_ticks()
+    max_time = 20000  # 20 seconds
+
+    while True:
+        screen.fill(WHITE)
+        quit_button()
+
+        seconds = pygame.time.get_ticks() - start_ticks
+        if seconds > max_time:
+            state = 'home'
+            return
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit(); sys.exit()
+
+        keys_pressed = pygame.key.get_pressed()
+        if keys_pressed[pygame.K_LEFT]: player.x -= speed
+        if keys_pressed[pygame.K_RIGHT]: player.x += speed
+        if keys_pressed[pygame.K_UP]: player.y -= speed
+        if keys_pressed[pygame.K_DOWN]: player.y += speed
+
+        # Chaser follows player
+        if chaser.x < player.x: chaser.x += chaser_speed
+        elif chaser.x > player.x: chaser.x -= chaser_speed
+        if chaser.y < player.y: chaser.y += chaser_speed
+        elif chaser.y > player.y: chaser.y -= chaser_speed
+
+        pygame.draw.rect(screen, BLUE, player)
+        pygame.draw.rect(screen, RED, chaser)
+
+        for k in keys[:]:
+            pygame.draw.rect(screen, GREEN, k)
+            if player.colliderect(k):
+                keys.remove(k)
+                keys_collected += 1
+
+        if player.colliderect(chaser):
+            state = 'home'
+            return
+
+        if keys_collected == total_keys:
+            victory_screen()
+            return
+
+        status = font.render(f"Keys Collected: {keys_collected}/{total_keys}", True, BLACK)
+        screen.blit(status, (10, 10))
+
+        for event in pygame.event.get():
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                mx, my = event.pos
+                if 10 <= mx <= 110 and 10 <= my <= 50:
+                    state = "home"
+                    return
+
+        pygame.display.flip()
+        clock.tick(60)
+
+# -------------------- MAIN GAME LOOP --------------------
+
+def game_loop():
+    global state, selected_character
+    while True:
+        screen.fill(WHITE)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                mx, my = event.pos
+
+                # Home screen buttons
+                if state == "home":
+                    if 100 <= mx <= 300 and 400 <= my <= 460:
+                        state = "rules"
+                    elif 500 <= mx <= 700 and 400 <= my <= 460:
+                        state = "characters"
+
+                # Rules screen back button
+                elif state == "rules":
+                    if 600 <= mx <= 750 and 500 <= my <= 550:
+                        state = "home"
+
+                # Character screen buttons
+                elif state == "characters":
+                    if 100 <= mx <= 300 and 200 <= my <= 260:
+                        selected_character = "Character 1"
+                        countdown()
+                        state = "tic_tac_toe"
+                    elif 500 <= mx <= 700 and 200 <= my <= 260:
+                        selected_character = "Character 2"
+                        countdown()
+                        state = "tic_tac_toe"
+                    elif 10 <= mx <= 110 and 10 <= my <= 50:
+                        state = "home"
+
+                # Quit button on all other screens
+                else:
+                    if 10 <= mx <= 110 and 10 <= my <= 50:
+                        state = "home"
+
+        # Screen rendering and game state handling
+        if state == "home":
+            menu_screen()
+        elif state == "rules":
+            rules_screen()
+        elif state == "characters":
+            character_screen()
+        elif state == "tic_tac_toe":
+            tic_tac_toe()
+        elif state == "rps":
+            rock_paper()
+        elif state == "tug":
+            tug_of_war()
+        elif state == "redlight":
+            red_light()
+        elif state == "honey":
+            honeycomb()
+        elif state == "jump":
+            jump_rope()
+        elif state == "hide":
+            hide_seek()
+        elif state == "victory":
+            victory_screen()
+
+        pygame.display.flip()
+        clock.tick(60)
+
+if __name__ == "__main__":
+    run_glitch_intro()
+    game_loop()
+
